@@ -729,12 +729,6 @@
   async function startCamera() {
     try {
       codeReader = new ZXing.BrowserMultiFormatReader();
-      const videoInputDevices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-      const selectedDevice = videoInputDevices.find(d =>
-        d.label.toLowerCase().includes('back') ||
-        d.label.toLowerCase().includes('rear') ||
-        d.label.toLowerCase().includes('post')
-      ) || videoInputDevices[videoInputDevices.length - 1];
 
       document.getElementById('startScreen').style.display = 'none';
       document.getElementById('scanOverlay').classList.add('active');
@@ -743,16 +737,20 @@
 
       scanning = true;
 
-      codeReader.decodeFromVideoDevice(selectedDevice ? selectedDevice.deviceId : undefined, 'video', (result, err) => {
-        if (result) {
-          const now = Date.now();
-          if (result.text !== lastScannedCode || now - lastScanTime > 3000) {
-            lastScannedCode = result.text;
-            lastScanTime = now;
-            handleScan(result.text);
+      await codeReader.decodeFromConstraints(
+        { video: { facingMode: 'environment' } },
+        'video',
+        (result, err) => {
+          if (result) {
+            const now = Date.now();
+            if (result.text !== lastScannedCode || now - lastScanTime > 3000) {
+              lastScannedCode = result.text;
+              lastScanTime = now;
+              handleScan(result.text);
+            }
           }
         }
-      });
+      );
     } catch (err) {
       alert('Impossibile accedere alla fotocamera: ' + err.message);
     }
