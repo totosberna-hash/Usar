@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QR Presenze</title>
-<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -724,11 +724,14 @@
   updateClock();
 
   // ── CAMERA ────────────────────────────────────────────
-  let codeReader = null;
-
   async function startCamera() {
     try {
-      codeReader = new ZXing.BrowserMultiFormatReader();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+      });
+      const video = document.getElementById('video');
+      video.srcObject = stream;
+      video.play();
 
       document.getElementById('startScreen').style.display = 'none';
       document.getElementById('scanOverlay').classList.add('active');
@@ -736,27 +739,40 @@
       document.getElementById('statusText').textContent = 'Fotocamera attiva — in ascolto...';
 
       scanning = true;
-
-      await codeReader.decodeFromConstraints(
-        { video: { facingMode: 'environment' } },
-        'video',
-        (result, err) => {
-          if (result) {
-            const now = Date.now();
-            if (result.text !== lastScannedCode || now - lastScanTime > 3000) {
-              lastScannedCode = result.text;
-              lastScanTime = now;
-              handleScan(result.text);
-            }
-          }
-        }
-      );
+      tick();
     } catch (err) {
       alert('Impossibile accedere alla fotocamera: ' + err.message);
     }
   }
 
-  function tick() {}
+  function tick() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // Prova lettura normale
+      let code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'attemptBoth'
+      });
+
+      if (code) {
+        const now = Date.now();
+        if (code.data !== lastScannedCode || now - lastScanTime > 3000) {
+          lastScannedCode = code.data;
+          lastScanTime = now;
+          handleScan(code.data);
+        }
+      }
+    }
+
+    if (scanning) animationId = requestAnimationFrame(tick);
+  }
 
   // ── SCAN LOGIC ────────────────────────────────────────
   function handleScan(data) {
