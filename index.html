@@ -761,6 +761,21 @@
         inversionAttempts: 'attemptBoth'
       });
 
+      // Se non trovato, prova con canvas ridotto per migliorare contrasto
+      if (!code) {
+        const smallCanvas = document.createElement('canvas');
+        const scale = 1.5;
+        smallCanvas.width = canvas.width * scale;
+        smallCanvas.height = canvas.height * scale;
+        const sCtx = smallCanvas.getContext('2d');
+        sCtx.filter = 'contrast(1.5) brightness(1.1)';
+        sCtx.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
+        const smallData = sCtx.getImageData(0, 0, smallCanvas.width, smallCanvas.height);
+        code = jsQR(smallData.data, smallData.width, smallData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
+      }
+
       if (code) {
         const now = Date.now();
         if (code.data !== lastScannedCode || now - lastScanTime > 3000) {
