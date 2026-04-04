@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QR Presenze</title>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -598,7 +598,7 @@
         Scanner fotocamera
       </div>
       <div class="scanner-wrapper">
-        <div id="video" style="width:100%;height:100%;"></div>
+        <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas" style="display:none"></canvas>
 
         <div class="scan-overlay" id="scanOverlay">
@@ -724,54 +724,57 @@
   updateClock();
 
   // ── CAMERA ────────────────────────────────────────────
-  let html5QrCode = null;
+  let detector = null;
 
   async function startCamera() {
     try {
+      // Verifica supporto BarcodeDetector
+      if (!('BarcodeDetector' in window)) {
+        alert('Il tuo browser non supporta la lettura QR nativa. Aggiorna Chrome.');
+        return;
+      }
+
+      detector = new BarcodeDetector({ formats: ['qr_code'] });
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+      });
+
+      const video = document.getElementById('video');
+      video.srcObject = stream;
+      await video.play();
+
       document.getElementById('startScreen').style.display = 'none';
       document.getElementById('scanOverlay').classList.add('active');
       document.getElementById('statusDot').classList.remove('inactive');
       document.getElementById('statusText').textContent = 'Fotocamera attiva — in ascolto...';
 
       scanning = true;
-
-      html5QrCode = new Html5Qrcode("video");
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        { 
-          fps: 15, 
-          qrbox: { width: 200, height: 200 },
-          aspectRatio: 1.0
-        },
-        (decodedText) => {
-          const now = Date.now();
-          if (decodedText !== lastScannedCode || now - lastScanTime > 3000) {
-            lastScannedCode = decodedText;
-            lastScanTime = now;
-            handleScan(decodedText);
-          }
-        },
-        (errorMessage) => { /* ignore scan errors */ }
-      );
-      
-      // Make video element fill the container
-      setTimeout(() => {
-        const videoEl = document.querySelector('#video video');
-        if (videoEl) {
-          videoEl.style.width = '100%';
-          videoEl.style.height = '100%';
-          videoEl.style.objectFit = 'cover';
-          videoEl.style.position = 'absolute';
-          videoEl.style.top = '0';
-          videoEl.style.left = '0';
-        }
-      }, 500);
+      tick();
     } catch (err) {
       alert('Impossibile accedere alla fotocamera: ' + err.message);
     }
   }
 
-  function tick() {}
+  async function tick() {
+    if (!scanning) return;
+    const video = document.getElementById('video');
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          const now = Date.now();
+          const data = barcodes[0].rawValue;
+          if (data !== lastScannedCode || now - lastScanTime > 3000) {
+            lastScannedCode = data;
+            lastScanTime = now;
+            handleScan(data);
+          }
+        }
+      } catch (e) {}
+    }
+    if (scanning) requestAnimationFrame(tick);
+  }
 
   // ── SCAN LOGIC ────────────────────────────────────────
   function handleScan(data) {
