@@ -572,6 +572,8 @@
 
   .pulse.inactive { background: var(--text-dim); animation: none; }
 </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -708,6 +710,14 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // ── FIREBASE ───────────────────────────────────────────
+  const firebaseConfig = {
+    databaseURL: "https://cancello-usar-default-rtdb.europe-west1.firebasedatabase.app/"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const presenzaRef = db.ref('presenze');
+
   // ── STATE ──────────────────────────────────────────────
   let records = [];        // { id, data, entrata, uscita }
   let scanning = false;
@@ -716,6 +726,7 @@
   let currentFilter = 'all';
   let animationId = null;
   let currentFacingMode = 'environment';
+  let isViewer = false;
 
   // ── CLOCK ──────────────────────────────────────────────
   function updateClock() {
@@ -802,6 +813,21 @@
     setTimeout(() => startCamera(), 300);
   }
 
+  // ── FIREBASE SYNC ─────────────────────────────────────
+  function syncFromFirebase() {
+    presenzaRef.on('value', (snapshot) => {
+      const data = snapshot.val() || {};
+      records = Object.values(data).map(r => ({
+        ...r,
+        entrataDate: r.entrataDate ? new Date(r.entrataDate) : null,
+        uscitaDate: r.uscitaDate ? new Date(r.uscitaDate) : null,
+      }));
+      records.sort((a, b) => (b.entrataDate || 0) - (a.entrataDate || 0));
+      updateStats();
+      renderTable();
+    });
+  }
+
   // ── SCAN LOGIC ────────────────────────────────────────
   function handleScan(data) {
     const now = new Date();
@@ -812,21 +838,26 @@
       // USCITA
       existing.uscita = timeStr;
       existing.uscitaDate = now;
+      presenzaRef.child(existing.id).update({
+        uscita: timeStr,
+        uscitaDate: now.toISOString()
+      });
       flashEffect('out');
       showToast('🚪 Uscita registrata', 'out');
       updateLastScan(data, timeStr, 'out');
     } else {
       // INGRESSO
       const newRecord = {
-        id: Date.now(),
+        id: String(Date.now()),
         data: data,
         entrata: timeStr,
-        entrataDate: now,
+        entrataDate: now.toISOString(),
         uscita: null,
         uscitaDate: null,
         isNew: true
       };
       records.unshift(newRecord);
+      presenzaRef.child(newRecord.id).set(newRecord);
       flashEffect('in');
       showToast('✅ Ingresso registrato', 'in');
       updateLastScan(data, timeStr, 'in');
@@ -907,6 +938,7 @@
     if (confirm('Cancellare tutti i record?')) {
       records = [];
       lastScannedCode = null;
+      presenzaRef.remove();
       updateStats();
       renderTable();
       document.getElementById('lastScan').innerHTML = `
@@ -956,7 +988,7 @@
   }
 
   // Init
-  renderTable();
+  syncFromFirebase();
 </script>
 </body>
 </html>
