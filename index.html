@@ -598,7 +598,7 @@
         Scanner fotocamera
       </div>
       <div class="scanner-wrapper">
-        <video id="video" autoplay playsinline muted></video>
+        <div id="video" style="width:100%;height:100%;"></div>
         <canvas id="canvas" style="display:none"></canvas>
 
         <div class="scan-overlay" id="scanOverlay">
@@ -738,7 +738,11 @@
       html5QrCode = new Html5Qrcode("video");
       await html5QrCode.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { 
+          fps: 15, 
+          qrbox: { width: 200, height: 200 },
+          aspectRatio: 1.0
+        },
         (decodedText) => {
           const now = Date.now();
           if (decodedText !== lastScannedCode || now - lastScanTime > 3000) {
@@ -749,6 +753,19 @@
         },
         (errorMessage) => { /* ignore scan errors */ }
       );
+      
+      // Make video element fill the container
+      setTimeout(() => {
+        const videoEl = document.querySelector('#video video');
+        if (videoEl) {
+          videoEl.style.width = '100%';
+          videoEl.style.height = '100%';
+          videoEl.style.objectFit = 'cover';
+          videoEl.style.position = 'absolute';
+          videoEl.style.top = '0';
+          videoEl.style.left = '0';
+        }
+      }, 500);
     } catch (err) {
       alert('Impossibile accedere alla fotocamera: ' + err.message);
     }
