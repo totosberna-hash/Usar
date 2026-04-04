@@ -629,6 +629,7 @@
       <div class="status-bar">
         <div class="pulse inactive" id="statusDot"></div>
         <span id="statusText">Fotocamera non attiva</span>
+        <button id="btnStop" onclick="stopCamera()" style="display:none; margin-left:auto; background:var(--accent2); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; cursor:pointer;">⏹ Stop</button>
       </div>
     </div>
 
@@ -748,6 +749,7 @@
       document.getElementById('scanOverlay').classList.add('active');
       document.getElementById('statusDot').classList.remove('inactive');
       document.getElementById('statusText').textContent = 'Fotocamera attiva — in ascolto...';
+      document.getElementById('btnStop').style.display = 'inline-block';
 
       scanning = true;
       tick();
@@ -774,6 +776,20 @@
       } catch (e) {}
     }
     if (scanning) requestAnimationFrame(tick);
+  }
+
+  function stopCamera() {
+    scanning = false;
+    const video = document.getElementById('video');
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    }
+    document.getElementById('startScreen').style.display = 'flex';
+    document.getElementById('scanOverlay').classList.remove('active');
+    document.getElementById('statusDot').classList.add('inactive');
+    document.getElementById('statusText').textContent = 'Fotocamera non attiva';
+    document.getElementById('btnStop').style.display = 'none';
   }
 
   // ── SCAN LOGIC ────────────────────────────────────────
