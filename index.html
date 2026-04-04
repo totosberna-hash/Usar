@@ -814,6 +814,8 @@
   }
 
   // ── FIREBASE SYNC ─────────────────────────────────────
+  const infoRef = db.ref('info');
+
   function syncFromFirebase() {
     presenzaRef.on('value', (snapshot) => {
       const data = snapshot.val() || {};
@@ -825,6 +827,28 @@
       records.sort((a, b) => (b.entrataDate || 0) - (a.entrataDate || 0));
       updateStats();
       renderTable();
+    });
+
+    // Sync ingresso sito e squadra
+    infoRef.on('value', (snapshot) => {
+      const info = snapshot.val() || {};
+      const nomeEl = document.getElementById('nomeSpan');
+      const squadraEl = document.getElementById('squadraSpan');
+      if (info.sito !== undefined && nomeEl.textContent !== info.sito) {
+        nomeEl.textContent = info.sito;
+      }
+      if (info.squadra !== undefined && squadraEl.textContent !== info.squadra) {
+        squadraEl.textContent = info.squadra;
+      }
+    });
+  }
+
+  function setupInfoSync() {
+    document.getElementById('nomeSpan').addEventListener('input', function() {
+      infoRef.update({ sito: this.textContent });
+    });
+    document.getElementById('squadraSpan').addEventListener('input', function() {
+      infoRef.update({ squadra: this.textContent });
     });
   }
 
@@ -989,6 +1013,7 @@
 
   // Init
   syncFromFirebase();
+  setupInfoSync();
 </script>
 </body>
 </html>
