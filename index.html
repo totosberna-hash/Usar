@@ -781,15 +781,17 @@
           <tr>
             <th>#</th>
             <th>Dati QR Code</th>
-            <th>Ingresso</th>
-            <th>Uscita</th>
+            <th>Data Ingresso</th>
+            <th>Ora Ingresso</th>
+            <th>Data Uscita</th>
+            <th>Ora Uscita</th>
             <th>Durata</th>
             <th>Stato</th>
           </tr>
         </thead>
         <tbody id="tableBody">
           <tr>
-            <td colspan="6">
+            <td colspan="8">
               <div class="empty-state">
                 <div style="font-size:2.5rem">📭</div>
                 <p>Nessuna scansione ancora. Avvia la fotocamera e inquadra un QR code.</p>
@@ -974,15 +976,18 @@
   function handleScan(data) {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('it-IT');
+    const dateStr = now.toLocaleDateString('it-IT');
     const existing = records.find(r => r.data === data && !r.uscita);
 
     if (existing) {
       // USCITA
       existing.uscita = timeStr;
       existing.uscitaDate = now;
+      existing.uscitaDataStr = dateStr;
       presenzaRef.child(existing.id).update({
         uscita: timeStr,
-        uscitaDate: now.toISOString()
+        uscitaDate: now.toISOString(),
+        uscitaDataStr: dateStr
       });
       flashEffect('out');
       showToast('🚪 Uscita registrata', 'out');
@@ -993,9 +998,11 @@
         id: String(Date.now()),
         data: data,
         entrata: timeStr,
+        entrataDataStr: dateStr,
         entrataDate: now.toISOString(),
         uscita: null,
         uscitaDate: null,
+        uscitaDataStr: null,
         isNew: true
       };
       records.unshift(newRecord);
@@ -1103,7 +1110,7 @@
     if (currentFilter === 'out') filtered = records.filter(r => r.uscita);
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div style="font-size:2.5rem">📭</div><p>${
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div style="font-size:2.5rem">📭</div><p>${
         currentFilter === 'all' ? 'Nessuna scansione ancora. Avvia la fotocamera e inquadra un QR code.' :
         currentFilter === 'in'  ? 'Nessuna persona attualmente presente.' :
         'Nessuna uscita registrata.'
@@ -1118,7 +1125,9 @@
         <tr class="${rowClass}">
           <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${filtered.length - i}</td>
           <td><div class="qr-data" title="${escapeHtml(r.data)}">${escapeHtml(r.data)}</div></td>
+          <td><div class="time-cell" style="color:var(--text-dim)">${r.entrataDataStr || '—'}</div></td>
           <td><div class="time-cell" style="color:var(--in-color)">${r.entrata}</div></td>
+          <td><div class="time-cell ${r.uscita ? '' : 'no-exit'}">${r.uscitaDataStr || '—'}</div></td>
           <td><div class="time-cell ${r.uscita ? 'has-exit' : 'no-exit'}">${r.uscita || '—'}</div></td>
           <td><div class="duration-cell">${dur || (r.uscita ? '—' : '<span style="color:var(--text-dim);font-style:italic;font-size:0.75rem">in corso</span>')}</div></td>
           <td>${r.uscita

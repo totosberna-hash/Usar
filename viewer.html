@@ -227,14 +227,16 @@
           <tr>
             <th>#</th>
             <th>Dati QR Code</th>
-            <th>Ingresso</th>
-            <th>Uscita</th>
+            <th>Data Ingresso</th>
+            <th>Ora Ingresso</th>
+            <th>Data Uscita</th>
+            <th>Ora Uscita</th>
             <th>Durata</th>
             <th>Stato</th>
           </tr>
         </thead>
         <tbody id="tableBody">
-          <tr><td colspan="6"><div class="empty-state"><div style="font-size:2.5rem">📭</div><p>In attesa di dati...</p></div></td></tr>
+          <tr><td colspan="8"><div class="empty-state"><div style="font-size:2.5rem">📭</div><p>In attesa di dati...</p></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -315,7 +317,7 @@
     if (currentFilter === 'out') filtered = records.filter(r => r.uscita);
 
     if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div style="font-size:2.5rem">📭</div><p>Nessun dato disponibile.</p></div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div style="font-size:2.5rem">📭</div><p>Nessun dato disponibile.</p></div></td></tr>';
       return;
     }
 
@@ -324,8 +326,10 @@
       return `<tr>
         <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.8rem">${filtered.length - i}</td>
         <td><div class="qr-data" title="${escapeHtml(r.data)}">${escapeHtml(r.data)}</div></td>
+        <td><div class="time-cell" style="color:var(--text-dim)">${r.entrataDataStr || '—'}</div></td>
         <td><div class="time-cell" style="color:var(--in-color)">${r.entrata}</div></td>
-        <td><div class="time-cell">${r.uscita || '—'}</div></td>
+        <td><div class="time-cell">${r.uscitaDataStr || '—'}</div></td>
+        <td><div class="time-cell ${r.uscita ? 'has-exit' : ''}">${r.uscita || '—'}</div></td>
         <td>${dur || (r.uscita ? '—' : '<span style="color:var(--text-dim);font-style:italic;font-size:0.75rem">in corso</span>')}</td>
         <td>${r.uscita ? '<span class="tag out">USCITO</span>' : '<span class="tag in">PRESENTE</span>'}</td>
       </tr>`;
